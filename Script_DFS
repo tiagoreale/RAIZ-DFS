@@ -1,0 +1,43 @@
+@ECHO OFF
+TITLE - SCRIPT NAMESPACE DFS
+CLS
+@ECHO OFF
+REM DESENVOLVIDO POR: TIAGO REALE
+REM EM: 16/09/2020
+REM VERSAO 1.0
+REM ATUALIZACOES
+:: 16/09/2020 - AJUSTADO PARA ATENDER AS NECESSIDADES DA EMPRESA XXXXXXXXXX
+
+SET SERVER=SRVDC1
+SET NAMESPACE=SEU_DOMINIO.LOCAL
+
+NET TIME \\%SERVER% /SET /YES 2> NUL
+NET USE X: /DELETE /YES 2> NUL
+NET USE X: \\%NAMESPACE%\DFS /YES
+
+:: VERIFICAÇÕES
+::SET ICACLS=icacls.exe
+::IF NOT EXIST "%systemroot%\system32\icacls.exe" ( SET ICACLS=cacls.exe )
+SET ICACLS=cacls.exe
+
+REM IDENTIFICANDO O CAMINHO DO DESKTOP E DOCUMENTOS
+Reg query "HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\Explorer\User Shell Folders" /v "Desktop" | "%AWK%"  "{ print $3,$4,$5,$6}" | find /I "Desktop" > %TEMP%\dtp.txt
+Reg query "HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\Explorer\User Shell Folders" /v "Personal" | "%AWK%"  "{ print $3,$4,$5,$6}" | find /I "Docume" > %TEMP%\docs.txt
+set /p DIR_DESKTOP=<%TEMP%\dtp.txt
+set /p DIR_DOCS=<%TEMP%\docs.txt
+
+Reg query "HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\Explorer\User Shell Folders" /v "Desktop" | FIND /I "USERPROFILE"
+IF %ERRORLEVEL% EQU 0 (
+	echo NAO FORAM ENCONTRAS DIRETIVAS DE REDIRECIONAMENTO DE DIRETORIO
+	IF NOT EXIST "%SYSTEMDRIVE%%HomePath%\DESKTOP\PUBLICO.LNK" ( XCOPY /E /R /Y "\\%SERVER%\padrao$\Atalhos\*.*" "%SYSTEMDRIVE%%HomePath%\DESKTOP" )
+) ELSE (
+	echo DIRETIVA DE REDIRECIONAMENTO DE DIRETORIOS DETECTADA
+	IF NOT EXIST "%DIR_DESKTOP%\PUBLICO.LNK" ( XCOPY /E /R /Y "\\%SERVER%\padrao$\Atalhos\*.*" "%DIR_DESKTOP%" )
+	%ICACLS% "%DIR_DESKTOP%" /E /P "Administrator":F
+	%ICACLS% "%DIR_DOCS%" /E /P "Administrator":F
+)
+
+:: ======================================================
+echo CUSTOMIZACAO PARA O CLIENTE: %EMPRESA%
+:: ======================================================
+
